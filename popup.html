@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab Sleeper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+
+    <header class="popup-header">
+      <img src="icons/icon48.png" alt="" class="logo" aria-hidden="true">
+      <h1 class="app-name">Tab Sleeper</h1>
+    </header>
+
+    <section class="stat-row">
+      <span class="stat-label">Sleeping tabs</span>
+      <span id="sleepingCount" class="stat-value">—</span>
+    </section>
+
+    <hr class="divider">
+
+    <section class="setting-row">
+      <label for="autoSleepToggle" class="setting-label">Auto-sleep</label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoSleepToggle">
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <section class="setting-row" id="timeoutRow">
+      <label for="timeoutInput" class="setting-label">Sleep after (minutes)</label>
+      <input
+        type="number"
+        id="timeoutInput"
+        class="timeout-input"
+        min="1"
+        max="480"
+        step="1"
+      >
+    </section>
+
+    <p id="saveStatus" class="save-status" aria-live="polite"></p>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

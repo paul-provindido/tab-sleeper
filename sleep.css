@@ -1,0 +1,78 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Top bar: Awaken button centered at the top ─────────────────────────── */
+
+.top-bar {
+  width: 100%;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.awaken-btn {
+  padding: 10px 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border: none;
+  border-radius: 24px;
+  background: #4a9eff;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 12px rgba(74, 158, 255, 0.35);
+}
+
+.awaken-btn:hover  { background: #2a7eff; }
+.awaken-btn:active { transform: scale(0.97); }
+
+/* ── Info block: centered in the remaining space ─────────────────────────── */
+
+.info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 16px;
+}
+
+.zzz-icon {
+  font-size: 4rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #ffffff;
+  max-width: 640px;
+  word-break: break-word;
+  opacity: 0.9;
+}
+
+.page-url {
+  font-size: 0.85rem;
+  color: #6c8ba8;
+  max-width: 640px;
+  word-break: break-all;
+}

@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Sleeper",
+  "version": "1.0.0",
+  "description": "Save memory by automatically suspending inactive tabs.",
+
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "contextMenus"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["sleep.html", "sleep.css", "sleep.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
