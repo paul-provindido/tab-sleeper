@@ -4,7 +4,8 @@ const SLEEP_PAGE_BASE = chrome.runtime.getURL('sleep.html');
 const ALARM_NAME = 'tabSleepCheck';
 const ALARM_PERIOD_MINUTES = 1;
 const DEFAULT_TIMEOUT_MINUTES = 30;
-const CONTEXT_MENU_ID = 'sleepTab';
+const CONTEXT_MENU_ID            = 'sleepTab';
+const CONTEXT_MENU_NEVER_SLEEP_ID = 'neverSleepTab';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -53,12 +54,21 @@ async function getSettings() {
 // ─── Initialization ───────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async () => {
-  // Set up context menu
-  chrome.contextMenus.create({
-    id:       CONTEXT_MENU_ID,
-    title:    'Sleep Tab',
-    contexts: ['page']
-  });
+  // Set up context menu (if API is available)
+  if (chrome.contextMenus) {
+    chrome.contextMenus.create({
+      id:       CONTEXT_MENU_ID,
+      title:    'Sleep Tab',
+      contexts: ['page']
+    });
+    chrome.contextMenus.create({
+      id:       CONTEXT_MENU_NEVER_SLEEP_ID,
+      title:    "Don't sleep this tab",
+      type:     'checkbox',
+      checked:  false,
+      contexts: ['page']
+    });
+  }
 
   // Create the inactivity check alarm
   chrome.alarms.create(ALARM_NAME, {
@@ -110,6 +120,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const entry = stored[`tab_${tab.id}`];
     if (!entry) continue;
     if (entry.sleeping) continue;
+    if (entry.neverSleep) continue;
 
     const elapsed = now - entry.lastActiveAt;
     if (elapsed >= timeoutMs) {
@@ -126,6 +137,9 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   await chrome.storage.local.set({
     [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
   });
+  if (chrome.contextMenus) {
+    chrome.contextMenus.update(CONTEXT_MENU_NEVER_SLEEP_ID, { checked: !!entry.neverSleep });
+  }
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
@@ -148,9 +162,21 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 if (chrome.contextMenus) {
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId !== CONTEXT_MENU_ID) return;
-    if (!tab || !isSleepable(tab, { allowActive: true })) return;
-    await sleepTab(tab);
+    if (!tab) return;
+
+    if (info.menuItemId === CONTEXT_MENU_ID) {
+      const exclusions = await getExclusions();
+      if (!isSleepable(tab, { allowActive: true, exclusions })) return;
+      await sleepTab(tab);
+      return;
+    }
+
+    if (info.menuItemId === CONTEXT_MENU_NEVER_SLEEP_ID) {
+      const key    = `tab_${tab.id}`;
+      const stored = await chrome.storage.local.get(key);
+      const entry  = stored[key] || {};
+      await chrome.storage.local.set({ [key]: { ...entry, neverSleep: info.checked } });
+    }
   });
 }
 
@@ -185,6 +211,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
         if (!isSleepable(tab, { exclusions })) continue;
+        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
+        const entry  = stored[`tab_${tab.id}`] || {};
+        if (entry.neverSleep) continue;
         try { await sleepTab(tab); } catch {}
       }
       sendResponse({ ok: true });

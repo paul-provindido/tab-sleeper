@@ -3,6 +3,7 @@ const timeoutInput    = document.getElementById('timeoutInput');
 const timeoutRow      = document.getElementById('timeoutRow');
 const sleepingCount   = document.getElementById('sleepingCount');
 const saveStatus      = document.getElementById('saveStatus');
+const neverSleepToggle   = document.getElementById('neverSleepToggle');
 const sleepTabBtn        = document.getElementById('sleepTabBtn');
 const sleepAllBtn        = document.getElementById('sleepAllBtn');
 const exclusionTextarea  = document.getElementById('exclusionTextarea');
@@ -52,6 +53,25 @@ async function saveSettings() {
   saveTimer = setTimeout(() => { saveStatus.textContent = ''; }, 1500);
 }
 
+// ─── Never-sleep toggle ───────────────────────────────────────────────────────
+
+async function loadNeverSleep() {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (!tab) return;
+  const stored = await chrome.storage.local.get(`tab_${tab.id}`);
+  const entry  = stored[`tab_${tab.id}`] || {};
+  neverSleepToggle.checked = !!entry.neverSleep;
+}
+
+neverSleepToggle.addEventListener('change', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (!tab) return;
+  const key    = `tab_${tab.id}`;
+  const stored = await chrome.storage.local.get(key);
+  const entry  = stored[key] || {};
+  await chrome.storage.local.set({ [key]: { ...entry, neverSleep: neverSleepToggle.checked } });
+});
+
 // ─── Exclusions ───────────────────────────────────────────────────────────────
 
 async function loadExclusions() {
@@ -98,4 +118,5 @@ timeoutInput.addEventListener('change', saveSettings);
 
 loadSettings();
 loadSleepingCount();
+loadNeverSleep();
 loadExclusions();
