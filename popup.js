@@ -3,8 +3,10 @@ const timeoutInput    = document.getElementById('timeoutInput');
 const timeoutRow      = document.getElementById('timeoutRow');
 const sleepingCount   = document.getElementById('sleepingCount');
 const saveStatus      = document.getElementById('saveStatus');
-const sleepTabBtn     = document.getElementById('sleepTabBtn');
-const sleepAllBtn     = document.getElementById('sleepAllBtn');
+const sleepTabBtn        = document.getElementById('sleepTabBtn');
+const sleepAllBtn        = document.getElementById('sleepAllBtn');
+const exclusionTextarea  = document.getElementById('exclusionTextarea');
+const saveExclusionsBtn  = document.getElementById('saveExclusionsBtn');
 
 let saveTimer = null;
 
@@ -50,6 +52,26 @@ async function saveSettings() {
   saveTimer = setTimeout(() => { saveStatus.textContent = ''; }, 1500);
 }
 
+// ─── Exclusions ───────────────────────────────────────────────────────────────
+
+async function loadExclusions() {
+  const { exclusions = [] } = await chrome.storage.sync.get('exclusions');
+  exclusionTextarea.value = exclusions.join('\n');
+}
+
+async function saveExclusions() {
+  const exclusions = exclusionTextarea.value
+    .split('\n')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+  await chrome.storage.sync.set({ exclusions });
+  saveStatus.textContent = 'Saved';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { saveStatus.textContent = ''; }, 1500);
+}
+
+saveExclusionsBtn.addEventListener('click', saveExclusions);
+
 // ─── Sleep buttons ────────────────────────────────────────────────────────────
 
 sleepTabBtn.addEventListener('click', async () => {
@@ -76,3 +98,4 @@ timeoutInput.addEventListener('change', saveSettings);
 
 loadSettings();
 loadSleepingCount();
+loadExclusions();

@@ -147,3 +147,36 @@ input:checked + .slider::before     { transform: translateX(20px); }
 
 .btn-ghost               { background: #f0f0f0; color: #333; }
 .btn-ghost:hover         { background: #e0e0e0; }
+
+/* ── Exclusions ─────────────────────────────────────────────────────────── */
+
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.exclusion-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #222;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.exclusion-textarea:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.exclusion-save-btn {
+  margin-top: 6px;
+  width: 100%;
+}

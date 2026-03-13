@@ -8,12 +8,19 @@ const CONTEXT_MENU_ID = 'sleepTab';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function isSleepable(tab, { allowActive = false } = {}) {
+function isSleepable(tab, { allowActive = false, exclusions = [] } = {}) {
   if (!tab.url) return false;
   if (!allowActive && tab.active) return false;
   if (tab.pinned) return false;
   const blocked = ['chrome://', 'chrome-extension://', 'about:', 'edge://'];
-  return !blocked.some(prefix => tab.url.startsWith(prefix));
+  if (blocked.some(prefix => tab.url.startsWith(prefix))) return false;
+  if (exclusions.length > 0) {
+    try {
+      const host = new URL(tab.url).hostname;
+      if (exclusions.some(e => host.includes(e))) return false;
+    } catch { return false; }
+  }
+  return true;
 }
 
 async function sleepTab(tab) {
@@ -28,6 +35,11 @@ async function sleepTab(tab) {
   await chrome.storage.local.set({
     [`tab_${tab.id}`]: { ...entry, lastActiveAt: Date.now(), sleeping: true }
   });
+}
+
+async function getExclusions() {
+  const { exclusions = [] } = await chrome.storage.sync.get('exclusions');
+  return exclusions;
 }
 
 async function getSettings() {
@@ -86,12 +98,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const { autoSleepEnabled, timeoutMinutes } = await getSettings();
   if (!autoSleepEnabled) return;
 
+  const exclusions = await getExclusions();
   const tabs = await chrome.tabs.query({});
   const now = Date.now();
   const timeoutMs = timeoutMinutes * 60 * 1000;
 
   for (const tab of tabs) {
-    if (!isSleepable(tab)) continue;
+    if (!isSleepable(tab, { exclusions })) continue;
 
     const stored = await chrome.storage.local.get(`tab_${tab.id}`);
     const entry = stored[`tab_${tab.id}`];
@@ -156,7 +169,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     (async () => {
       try {
         const tab = await chrome.tabs.get(message.tabId);
-        if (isSleepable(tab, { allowActive: true })) {
+        const exclusions = await getExclusions();
+        if (isSleepable(tab, { allowActive: true, exclusions })) {
           await sleepTab(tab);
         }
       } catch {}
@@ -167,9 +181,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.action === 'sleepAllTabs') {
     (async () => {
+      const exclusions = await getExclusions();
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
-        if (!isSleepable(tab)) continue;
+        if (!isSleepable(tab, { exclusions })) continue;
         try { await sleepTab(tab); } catch {}
       }
       sendResponse({ ok: true });

@@ -48,6 +48,20 @@
 
     <p id="saveStatus" class="save-status" aria-live="polite"></p>
 
+    <hr class="divider">
+
+    <section class="exclusions-section">
+      <p class="section-label">Excluded domains</p>
+      <textarea
+        id="exclusionTextarea"
+        class="exclusion-textarea"
+        rows="4"
+        placeholder="One domain per line&#10;youtube.com&#10;app.example.com"
+        spellcheck="false"
+      ></textarea>
+      <button id="saveExclusionsBtn" class="btn btn-primary exclusion-save-btn">Save</button>
+    </section>
+
   </div>
   <script src="popup.js"></script>
 </body>
