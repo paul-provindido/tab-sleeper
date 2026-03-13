@@ -7,16 +7,10 @@
   document.getElementById('pageUrl').textContent   = originalUrl;
   document.title = 'Sleeping: ' + originalTitle;
 
-  document.getElementById('awakenBtn').addEventListener('click', () => {
-    if (originalUrl) {
-      window.location.href = originalUrl;
-    }
-  });
-})();
+  function awaken() {
+    if (originalUrl) window.location.href = originalUrl;
+  }
 
-/**
-TO DO:
-Add sleep tab in chrome icon at the top
-Add sleep all tabs
-Add exclusion rules
-*/
+  document.getElementById('awakenBtn').addEventListener('click', awaken);
+  document.body.addEventListener('click', awaken);
+})();
