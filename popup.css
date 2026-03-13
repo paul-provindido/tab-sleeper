@@ -12,6 +12,10 @@ body {
   background: #fff;
 }
 
+h2 {
+  padding: 10px 0;
+}
+
 .container { padding: 16px; }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -51,6 +55,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+  padding: 10px 0;
 }
 
 .setting-label { color: #333; }
