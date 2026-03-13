@@ -23,8 +23,10 @@ async function sleepTab(tab) {
   });
   const sleepUrl = `${SLEEP_PAGE_BASE}?${params.toString()}`;
   await chrome.tabs.update(tab.id, { url: sleepUrl });
+  const stored = await chrome.storage.local.get(`tab_${tab.id}`);
+  const entry  = stored[`tab_${tab.id}`] || {};
   await chrome.storage.local.set({
-    [`tab_${tab.id}`]: { lastActiveAt: Date.now(), sleeping: true }
+    [`tab_${tab.id}`]: { ...entry, lastActiveAt: Date.now(), sleeping: true }
   });
 }
 
@@ -106,8 +108,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 // ─── Tab lifecycle tracking ───────────────────────────────────────────────────
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  const stored = await chrome.storage.local.get(`tab_${tabId}`);
+  const entry  = stored[`tab_${tabId}`] || {};
   await chrome.storage.local.set({
-    [`tab_${tabId}`]: { lastActiveAt: Date.now(), sleeping: false }
+    [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
   });
 });
 
@@ -129,11 +133,13 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 // ─── Context menu ─────────────────────────────────────────────────────────────
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== CONTEXT_MENU_ID) return;
-  if (!tab || !isSleepable(tab, { allowActive: true })) return;
-  await sleepTab(tab);
-});
+if (chrome.contextMenus) {
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId !== CONTEXT_MENU_ID) return;
+    if (!tab || !isSleepable(tab, { allowActive: true })) return;
+    await sleepTab(tab);
+  });
+}
 
 // ─── Messages (from popup) ────────────────────────────────────────────────────
 
@@ -143,6 +149,31 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const count = Object.values(allItems).filter(v => v && v.sleeping).length;
       sendResponse({ count });
     });
-    return true; // keep message channel open for async sendResponse
+    return true;
+  }
+
+  if (message.action === 'sleepCurrentTab') {
+    (async () => {
+      try {
+        const tab = await chrome.tabs.get(message.tabId);
+        if (isSleepable(tab, { allowActive: true })) {
+          await sleepTab(tab);
+        }
+      } catch {}
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+
+  if (message.action === 'sleepAllTabs') {
+    (async () => {
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        if (!isSleepable(tab)) continue;
+        try { await sleepTab(tab); } catch {}
+      }
+      sendResponse({ ok: true });
+    })();
+    return true;
   }
 });

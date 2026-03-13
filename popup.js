@@ -3,6 +3,8 @@ const timeoutInput    = document.getElementById('timeoutInput');
 const timeoutRow      = document.getElementById('timeoutRow');
 const sleepingCount   = document.getElementById('sleepingCount');
 const saveStatus      = document.getElementById('saveStatus');
+const sleepTabBtn     = document.getElementById('sleepTabBtn');
+const sleepAllBtn     = document.getElementById('sleepAllBtn');
 
 let saveTimer = null;
 
@@ -47,6 +49,19 @@ async function saveSettings() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { saveStatus.textContent = ''; }, 1500);
 }
+
+// ─── Sleep buttons ────────────────────────────────────────────────────────────
+
+sleepTabBtn.addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (tab) await chrome.runtime.sendMessage({ action: 'sleepCurrentTab', tabId: tab.id });
+  window.close();
+});
+
+sleepAllBtn.addEventListener('click', async () => {
+  await chrome.runtime.sendMessage({ action: 'sleepAllTabs' });
+  window.close();
+});
 
 // ─── Event listeners ──────────────────────────────────────────────────────────
 

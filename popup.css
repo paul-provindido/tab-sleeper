@@ -122,3 +122,28 @@ input:checked + .slider::before     { transform: translateX(20px); }
   text-align: center;
   margin-top: 2px;
 }
+
+/* ── Action buttons ─────────────────────────────────────────────────────── */
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary             { background: #4a9eff; color: #fff; }
+.btn-primary:hover       { background: #2f86f0; }
+
+.btn-ghost               { background: #f0f0f0; color: #333; }
+.btn-ghost:hover         { background: #e0e0e0; }
