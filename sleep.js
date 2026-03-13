@@ -7,8 +7,17 @@
   document.getElementById('pageUrl').textContent   = originalUrl;
   document.title = 'Sleeping: ' + originalTitle;
 
+  function isSafeUrl(url) {
+    try {
+      const { protocol } = new URL(url);
+      return protocol === 'http:' || protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
   function awaken() {
-    if (originalUrl) window.location.href = originalUrl;
+    if (isSafeUrl(originalUrl)) window.location.href = originalUrl;
   }
 
   document.getElementById('awakenBtn').addEventListener('click', awaken);

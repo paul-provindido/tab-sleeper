@@ -27,7 +27,7 @@ async function loadSettings() {
 async function loadSleepingCount() {
   try {
     const response = await chrome.runtime.sendMessage({ action: 'getSleepingCount' });
-    sleepingCount.textContent = response?.count ?? 0;
+    sleepingCount.textContent = Number.isInteger(response?.count) ? response.count : 0;
   } catch {
     sleepingCount.textContent = '0';
   }
@@ -83,7 +83,9 @@ async function saveExclusions() {
   const exclusions = exclusionTextarea.value
     .split('\n')
     .map(s => s.trim().toLowerCase())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(s => s.length <= 253)  // max valid hostname length
+    .slice(0, 100);                // cap list length
   await chrome.storage.sync.set({ exclusions });
   saveStatus.textContent = 'Saved';
   clearTimeout(saveTimer);
