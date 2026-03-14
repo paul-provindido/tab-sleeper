@@ -27,7 +27,8 @@ function isSleepable(tab, { allowActive = false, exclusions = [] } = {}) {
 async function sleepTab(tab) {
   const params = new URLSearchParams({
     url:   tab.url,
-    title: tab.title || tab.url
+    title: tab.title || tab.url,
+    icon:  tab.favIconUrl || ''
   });
   const sleepUrl = `${SLEEP_PAGE_BASE}?${params.toString()}`;
   await chrome.tabs.update(tab.id, { url: sleepUrl });
@@ -54,7 +55,6 @@ async function getSettings() {
 // ─── Initialization ───────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async () => {
-  // Set up context menu (if API is available)
   if (chrome.contextMenus) {
     chrome.contextMenus.create({
       id:       CONTEXT_MENU_ID,
@@ -70,34 +70,21 @@ chrome.runtime.onInstalled.addListener(async () => {
     });
   }
 
-  // Create the inactivity check alarm
-  chrome.alarms.create(ALARM_NAME, {
-    periodInMinutes: ALARM_PERIOD_MINUTES
-  });
+  chrome.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_PERIOD_MINUTES });
 
-  // Seed all currently-open tabs with a lastActiveAt timestamp
   const tabs = await chrome.tabs.query({});
   const now = Date.now();
   const existing = await chrome.storage.local.get(null);
   const toSet = {};
   for (const tab of tabs) {
     const key = `tab_${tab.id}`;
-    if (!existing[key]) {
-      toSet[key] = { lastActiveAt: now, sleeping: false };
-    }
+    if (!existing[key]) toSet[key] = { lastActiveAt: now, sleeping: false };
   }
-  if (Object.keys(toSet).length > 0) {
-    await chrome.storage.local.set(toSet);
-  }
+  if (Object.keys(toSet).length > 0) await chrome.storage.local.set(toSet);
 });
 
-// Re-create alarm if the service worker restarted without an install event
 chrome.alarms.get(ALARM_NAME, (alarm) => {
-  if (!alarm) {
-    chrome.alarms.create(ALARM_NAME, {
-      periodInMinutes: ALARM_PERIOD_MINUTES
-    });
-  }
+  if (!alarm) chrome.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_PERIOD_MINUTES });
 });
 
 // ─── Auto-sleep alarm ─────────────────────────────────────────────────────────
@@ -115,17 +102,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
   for (const tab of tabs) {
     if (!isSleepable(tab, { exclusions })) continue;
-
     const stored = await chrome.storage.local.get(`tab_${tab.id}`);
     const entry = stored[`tab_${tab.id}`];
     if (!entry) continue;
     if (entry.sleeping) continue;
     if (entry.neverSleep) continue;
-
-    const elapsed = now - entry.lastActiveAt;
-    if (elapsed >= timeoutMs) {
-      await sleepTab(tab);
-    }
+    if ((now - entry.lastActiveAt) >= timeoutMs) await sleepTab(tab);
   }
 });
 
@@ -143,11 +125,9 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-  // Only reset timer when the user (or a page) navigates somewhere
-  // that is NOT our own sleep page
   if (changeInfo.url && !changeInfo.url.startsWith(SLEEP_PAGE_BASE)) {
     const stored = await chrome.storage.local.get(`tab_${tabId}`);
-    const entry = stored[`tab_${tabId}`] || {};
+    const entry  = stored[`tab_${tabId}`] || {};
     await chrome.storage.local.set({
       [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
     });
@@ -196,9 +176,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       try {
         const tab = await chrome.tabs.get(message.tabId);
         const exclusions = await getExclusions();
-        if (isSleepable(tab, { allowActive: true, exclusions })) {
-          await sleepTab(tab);
-        }
+        if (isSleepable(tab, { allowActive: true, exclusions })) await sleepTab(tab);
       } catch {}
       sendResponse({ ok: true });
     })();

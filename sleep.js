@@ -20,6 +20,19 @@
     if (isSafeUrl(originalUrl)) window.location.href = originalUrl;
   }
 
+  const iconUrl = params.get('icon') || '';
+  if (iconUrl) {
+    try {
+      const { protocol } = new URL(iconUrl);
+      if (['http:', 'https:', 'data:'].includes(protocol)) {
+        const img = document.getElementById('favicon');
+        img.addEventListener('error', () => { img.style.display = 'none'; });
+        img.src = iconUrl;
+        img.style.display = '';
+      }
+    } catch {}
+  }
+
   document.getElementById('awakenBtn').addEventListener('click', awaken);
   document.body.addEventListener('click', awaken);
 })();
