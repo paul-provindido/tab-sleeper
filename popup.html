@@ -14,80 +14,69 @@
       <h1 class="app-name">Tab Sleeper</h1>
     </header>
 
+    <!-- Sleeping tabs stat + wake all -->
     <section class="stat-row">
       <span class="stat-label">Sleeping: <span id="sleepingCount" class="stat-value">—</span></span>
       <button id="wakeAllBtn" class="btn btn-ghost btn-sm" style="display:none">Wake All</button>
     </section>
 
+    <!-- Scrollable list of sleeping tabs -->
     <ul id="sleepingTabsList" class="sleeping-tabs-list"></ul>
 
     <hr>
 
-    <h2>This Tab</h2>
     <section class="setting-row">
-      <label for="neverSleepToggle" class="setting-label">Don't sleep this tab</label>
-      <label class="toggle-switch">
-        <input type="checkbox" id="neverSleepToggle">
-        <span class="slider"></span>
-      </label>
+      <h2>This Tab</h2>
+      <div class="inner-row">
+        <label for="neverSleepToggle" class="setting-label">Don't sleep this tab</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="neverSleepToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="inner-row">
+        <div class="action-row">
+          <button id="sleepTabBtn" class="btn btn-primary">Sleep This Tab</button>
+        </div>
+      </div>
     </section>
-
-    <div class="action-row">
-      <button id="sleepTabBtn" class="btn btn-primary">Sleep This Tab</button>
-    </div>
 
     <hr>
 
-    <h2>All Tabs</h2>
-    <div class="action-row">
-      <button id="sleepAllBtn" class="btn btn-primary">Sleep Other Tabs</button>
-    </div>
-
     <section class="setting-row">
-      <label for="autoSleepToggle" class="setting-label">Auto-sleep</label>
-      <label class="toggle-switch">
-        <input type="checkbox" id="autoSleepToggle">
-        <span class="slider"></span>
-      </label>
-    </section>
-
-    <section class="setting-row" id="timeoutRow">
-      <label for="timeoutInput" class="setting-label">Sleep after (minutes)</label>
-      <input
-        type="number"
-        id="timeoutInput"
-        class="timeout-input"
-        min="1"
-        max="480"
-        step="1"
-      >
-    </section>
-
-    <section class="setting-row">
-      <label for="autoWakeToggle" class="setting-label">Auto-wake</label>
-      <label class="toggle-switch">
-        <input type="checkbox" id="autoWakeToggle">
-        <span class="slider"></span>
-      </label>
-    </section>
-
-    <section class="setting-row" id="autoWakeRow">
-      <label for="autoWakeInput" class="setting-label">Wake after (hours)</label>
-      <input
-        type="number"
-        id="autoWakeInput"
-        class="timeout-input"
-        min="1"
-        max="24"
-        step="1"
-      >
+      <h2>All Tabs</h2>
+      <div class="action-row">
+        <button id="sleepAllBtn" class="btn btn-primary">Sleep Other Tabs</button>
+      </div>
+      <div class="inner-row">
+        <label for="autoSleepToggle" class="setting-label">Auto-sleep</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="autoSleepToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="inner-row" id="timeoutRow">
+        <label for="timeoutInput" class="setting-label">Sleep after (minutes)</label>
+        <input type="number" id="timeoutInput" class="timeout-input" min="1" max="480" step="1">
+      </div>
+      <div class="inner-row">
+        <label for="autoWakeToggle" class="setting-label">Auto-wake</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="autoWakeToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="inner-row" id="autoWakeRow">
+        <label for="autoWakeInput" class="setting-label">Wake after (hours)</label>
+        <input type="number" id="autoWakeInput" class="timeout-input" min="1" max="24" step="1">
+      </div>
     </section>
 
     <p id="saveStatus" class="save-status" aria-live="polite"></p>
 
     <hr>
 
-    <section class="exclusions-section">
+    <section class="textarea-section">
       <p class="section-label">Excluded domains</p>
       <textarea
         id="exclusionTextarea"
@@ -100,7 +89,7 @@
 
     <hr>
 
-    <section class="exclusions-section">
+    <section class="textarea-section">
       <p class="section-label">Per-domain timeout</p>
       <textarea
         id="domainTimeoutTextarea"
@@ -109,12 +98,12 @@
         placeholder="domain:minutes per line&#10;youtube.com:60&#10;gmail.com:120"
         spellcheck="false"
       ></textarea>
-      <button id="saveDomainTimeoutsBtn" class="btn btn-primary exclusion-save-btn">Save All Settings</button>
+      <button id="saveDomainTimeoutsBtn" class="btn btn-primary full-width-btn">Save All Settings</button>
     </section>
 
     <hr>
 
-    <section class="exclusions-section">
+    <section class="textarea-section">
       <p class="section-label">Settings</p>
       <div class="action-row">
         <button id="exportBtn" class="btn btn-ghost">Export</button>

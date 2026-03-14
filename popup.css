@@ -13,7 +13,7 @@ body {
 }
 
 h2 {
-  padding: 10px 0;
+  padding: 0 0 10px;
 }
 
 .container { padding: 16px; }
@@ -51,11 +51,14 @@ h2 {
 /* ── Settings rows ──────────────────────────────────────────────────────── */
 
 .setting-row {
+  padding: 10px 0;
+}
+
+.inner-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
-  padding: 10px 0;
+  padding: 6px 0;
 }
 
 .setting-label { color: #333; }
@@ -184,6 +187,19 @@ input:checked + .slider::before     { transform: translateX(20px); }
 .exclusion-save-btn {
   margin-top: 6px;
   width: 100%;
+}
+
+/* ── Textarea sections (exclusions, per-domain, settings) ───────────────── */
+
+.textarea-section {
+  padding: 10px 0;
+  margin-bottom: 4px;
+}
+
+.full-width-btn {
+  margin-top: 6px;
+  width: 100%;
+  flex: none;
 }
 
 /* ── Sleeping tabs list ─────────────────────────────────────────────────── */
