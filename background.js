@@ -35,7 +35,19 @@ async function sleepTab(tab) {
   const stored = await chrome.storage.local.get(`tab_${tab.id}`);
   const entry  = stored[`tab_${tab.id}`] || {};
   await chrome.storage.local.set({
-    [`tab_${tab.id}`]: { ...entry, lastActiveAt: Date.now(), sleeping: true }
+    [`tab_${tab.id}`]: { ...entry, lastActiveAt: Date.now(), sleeping: true, originalUrl: tab.url }
+  });
+}
+
+async function wakeTab(tabId) {
+  const stored = await chrome.storage.local.get(`tab_${tabId}`);
+  const entry  = stored[`tab_${tabId}`];
+  if (!entry || !entry.sleeping) return;
+  const url = entry.originalUrl;
+  if (!url) return;
+  await chrome.tabs.update(tabId, { url });
+  await chrome.storage.local.set({
+    [`tab_${tabId}`]: { ...entry, sleeping: false, lastActiveAt: Date.now() }
   });
 }
 
@@ -200,11 +212,44 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ─── Messages (from popup) ────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.action === 'getSleepingCount') {
-    chrome.storage.local.get(null, (allItems) => {
-      const count = Object.values(allItems).filter(v => v && v.sleeping).length;
-      sendResponse({ count });
-    });
+  if (message.action === 'getSleepingTabs') {
+    (async () => {
+      const allItems = await chrome.storage.local.get(null);
+      const tabs     = await chrome.tabs.query({});
+      const result   = [];
+      for (const tab of tabs) {
+        const entry = allItems[`tab_${tab.id}`];
+        if (entry && entry.sleeping) {
+          result.push({ tabId: tab.id, title: tab.title, originalUrl: entry.originalUrl });
+        }
+      }
+      sendResponse({ tabs: result });
+    })();
+    return true;
+  }
+
+  if (message.action === 'wakeTab') {
+    (async () => {
+      try { await wakeTab(message.tabId); } catch {}
+      await updateBadge();
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+
+  if (message.action === 'wakeAllTabs') {
+    (async () => {
+      const allItems = await chrome.storage.local.get(null);
+      const tabs     = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        const entry = allItems[`tab_${tab.id}`];
+        if (entry && entry.sleeping) {
+          try { await wakeTab(tab.id); } catch {}
+        }
+      }
+      await updateBadge();
+      sendResponse({ ok: true });
+    })();
     return true;
   }
 
