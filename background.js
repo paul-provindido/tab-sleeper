@@ -182,9 +182,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const stored = await chrome.storage.local.get(`tab_${tabId}`);
   const entry  = stored[`tab_${tabId}`] || {};
-  await chrome.storage.local.set({
-    [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
-  });
+  if (!entry.sleeping) {
+    await chrome.storage.local.set({
+      [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
+    });
+  }
   if (chrome.contextMenus) {
     chrome.contextMenus.update(CONTEXT_MENU_NEVER_SLEEP_ID, { checked: !!entry.neverSleep });
   }
@@ -198,6 +200,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     await chrome.storage.local.set({
       [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
     });
+    if (entry.sleeping) await updateBadge();
   }
 });
 
