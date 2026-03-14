@@ -14,6 +14,8 @@ const sleepingTabsList     = document.getElementById('sleepingTabsList');
 const exclusionTextarea    = document.getElementById('exclusionTextarea');
 const domainTimeoutTextarea  = document.getElementById('domainTimeoutTextarea');
 const saveDomainTimeoutsBtn  = document.getElementById('saveDomainTimeoutsBtn');
+const exportBtn            = document.getElementById('exportBtn');
+const importInput          = document.getElementById('importInput');
 
 let saveTimer = null;
 
@@ -182,6 +184,71 @@ sleepAllBtn.addEventListener('click', async () => {
 wakeAllBtn.addEventListener('click', async () => {
   await chrome.runtime.sendMessage({ action: 'wakeAllTabs' });
   loadSleepingTabs();
+});
+
+// ─── Export / Import ─────────────────────────────────────────────────────────
+
+exportBtn.addEventListener('click', async () => {
+  const data = await chrome.storage.sync.get(null);
+  const json  = JSON.stringify(data, null, 2);
+  const blob  = new Blob([json], { type: 'application/json' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href     = url;
+  a.download = 'tab-sleeper-settings.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+function validateImport(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+  const out = {};
+
+  if ('autoSleepEnabled' in data) out.autoSleepEnabled = Boolean(data.autoSleepEnabled);
+  if ('autoWakeEnabled'  in data) out.autoWakeEnabled  = Boolean(data.autoWakeEnabled);
+
+  if ('timeoutMinutes' in data) {
+    const v = Math.round(Number(data.timeoutMinutes));
+    if (Number.isFinite(v) && v >= 1 && v <= 480) out.timeoutMinutes = v;
+  }
+  if ('autoWakeHours' in data) {
+    const v = Math.round(Number(data.autoWakeHours));
+    if (Number.isFinite(v) && v >= 1 && v <= 24) out.autoWakeHours = v;
+  }
+  if ('exclusions' in data && Array.isArray(data.exclusions)) {
+    out.exclusions = data.exclusions
+      .filter(e => typeof e === 'string' && e.length > 0 && e.length <= 253)
+      .slice(0, 100);
+  }
+  if ('domainTimeouts' in data && data.domainTimeouts && typeof data.domainTimeouts === 'object' && !Array.isArray(data.domainTimeouts)) {
+    const dt = {};
+    for (const [k, v] of Object.entries(data.domainTimeouts)) {
+      const mins = Math.round(Number(v));
+      if (typeof k === 'string' && k.length > 0 && k.length <= 253 && Number.isFinite(mins) && mins >= 1 && mins <= 480) {
+        dt[k] = mins;
+      }
+    }
+    out.domainTimeouts = dt;
+  }
+  return out;
+}
+
+importInput.addEventListener('change', async () => {
+  const file = importInput.files[0];
+  if (!file) return;
+  try {
+    const text     = await file.text();
+    const data     = JSON.parse(text);
+    const toImport = validateImport(data);
+    await chrome.storage.sync.set(toImport);
+    await loadSettings();
+    await loadExclusions();
+    await loadDomainTimeouts();
+    showSaveStatus('Imported.');
+  } catch {
+    showSaveStatus('Import failed.');
+  }
+  importInput.value = '';
 });
 
 // ─── Event listeners ──────────────────────────────────────────────────────────
