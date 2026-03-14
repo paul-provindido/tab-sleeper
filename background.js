@@ -9,6 +9,13 @@ const CONTEXT_MENU_NEVER_SLEEP_ID = 'neverSleepTab';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function isSafeUrl(url) {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch { return false; }
+}
+
 function isSleepable(tab, { allowActive = false, exclusions = [] } = {}) {
   if (!tab.url) return false;
   if (!allowActive && tab.active) return false;
@@ -27,7 +34,7 @@ function isSleepable(tab, { allowActive = false, exclusions = [] } = {}) {
 async function sleepTab(tab) {
   const params = new URLSearchParams({
     url:   tab.url,
-    title: tab.title || tab.url,
+    title: (tab.title || tab.url).slice(0, 500),
     icon:  tab.favIconUrl || ''
   });
   const sleepUrl = `${SLEEP_PAGE_BASE}?${params.toString()}`;
@@ -44,7 +51,7 @@ async function wakeTab(tabId) {
   const entry  = stored[`tab_${tabId}`];
   if (!entry || !entry.sleeping) return;
   const url = entry.originalUrl;
-  if (!url) return;
+  if (!url || !isSafeUrl(url)) return;
   await chrome.tabs.update(tabId, { url });
   await chrome.storage.local.set({
     [`tab_${tabId}`]: { ...entry, sleeping: false, lastActiveAt: Date.now() }
@@ -53,7 +60,7 @@ async function wakeTab(tabId) {
 
 async function getExclusions() {
   const { exclusions = [] } = await chrome.storage.sync.get('exclusions');
-  return exclusions;
+  return Array.isArray(exclusions) ? exclusions.filter(e => typeof e === 'string') : [];
 }
 
 async function getSettings() {
@@ -68,7 +75,12 @@ async function getSettings() {
 
 async function getDomainTimeouts() {
   const { domainTimeouts = {} } = await chrome.storage.sync.get('domainTimeouts');
-  return domainTimeouts;
+  if (!domainTimeouts || typeof domainTimeouts !== 'object' || Array.isArray(domainTimeouts)) return {};
+  const safe = {};
+  for (const [k, v] of Object.entries(domainTimeouts)) {
+    if (typeof k === 'string' && Number.isFinite(v) && v >= 1) safe[k] = v;
+  }
+  return safe;
 }
 
 async function updateBadge() {
