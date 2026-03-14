@@ -63,9 +63,29 @@
       >
     </section>
 
+    <section class="setting-row">
+      <label for="autoWakeToggle" class="setting-label">Auto-wake</label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoWakeToggle">
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <section class="setting-row" id="autoWakeRow">
+      <label for="autoWakeInput" class="setting-label">Wake after (hours)</label>
+      <input
+        type="number"
+        id="autoWakeInput"
+        class="timeout-input"
+        min="1"
+        max="24"
+        step="1"
+      >
+    </section>
+
     <p id="saveStatus" class="save-status" aria-live="polite"></p>
 
-    <hr class="divider">
+    <hr>
 
     <section class="exclusions-section">
       <p class="section-label">Excluded domains</p>
@@ -76,7 +96,20 @@
         placeholder="One domain per line&#10;youtube.com&#10;app.example.com"
         spellcheck="false"
       ></textarea>
-      <button id="saveExclusionsBtn" class="btn btn-primary exclusion-save-btn">Save</button>
+    </section>
+
+    <hr>
+
+    <section class="exclusions-section">
+      <p class="section-label">Per-domain timeout</p>
+      <textarea
+        id="domainTimeoutTextarea"
+        class="exclusion-textarea"
+        rows="4"
+        placeholder="domain:minutes per line&#10;youtube.com:60&#10;gmail.com:120"
+        spellcheck="false"
+      ></textarea>
+      <button id="saveDomainTimeoutsBtn" class="btn btn-primary exclusion-save-btn">Save All Settings</button>
     </section>
 
   </div>

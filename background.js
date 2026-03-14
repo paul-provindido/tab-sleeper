@@ -59,9 +59,16 @@ async function getExclusions() {
 async function getSettings() {
   const defaults = {
     autoSleepEnabled: true,
-    timeoutMinutes: DEFAULT_TIMEOUT_MINUTES
+    timeoutMinutes:   DEFAULT_TIMEOUT_MINUTES,
+    autoWakeEnabled:  false,
+    autoWakeHours:    2
   };
   return chrome.storage.sync.get(defaults);
+}
+
+async function getDomainTimeouts() {
+  const { domainTimeouts = {} } = await chrome.storage.sync.get('domainTimeouts');
+  return domainTimeouts;
 }
 
 async function updateBadge() {
@@ -124,22 +131,36 @@ chrome.alarms.get(ALARM_NAME, async (alarm) => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM_NAME) return;
 
-  const { autoSleepEnabled, timeoutMinutes } = await getSettings();
-  if (!autoSleepEnabled) return;
-
-  const exclusions = await getExclusions();
-  const tabs = await chrome.tabs.query({});
-  const now = Date.now();
-  const timeoutMs = timeoutMinutes * 60 * 1000;
+  const { autoSleepEnabled, timeoutMinutes, autoWakeEnabled, autoWakeHours } = await getSettings();
+  const exclusions     = await getExclusions();
+  const domainTimeouts = await getDomainTimeouts();
+  const tabs           = await chrome.tabs.query({});
+  const now            = Date.now();
+  const defaultMs      = timeoutMinutes * 60 * 1000;
+  const autoWakeMs     = autoWakeHours  * 60 * 60 * 1000;
 
   for (const tab of tabs) {
-    if (!isSleepable(tab, { exclusions })) continue;
     const stored = await chrome.storage.local.get(`tab_${tab.id}`);
-    const entry = stored[`tab_${tab.id}`];
+    const entry  = stored[`tab_${tab.id}`];
     if (!entry) continue;
-    if (entry.sleeping) continue;
-    if (entry.neverSleep) continue;
-    if ((now - entry.lastActiveAt) >= timeoutMs) await sleepTab(tab);
+
+    if (entry.sleeping) {
+      if (autoWakeEnabled && (now - entry.lastActiveAt) >= autoWakeMs) {
+        try { await wakeTab(tab.id); } catch {}
+      }
+    } else {
+      if (!autoSleepEnabled) continue;
+      if (!isSleepable(tab, { exclusions })) continue;
+      if (entry.neverSleep) continue;
+      let timeoutMs = defaultMs;
+      try {
+        const host = new URL(tab.url).hostname;
+        for (const [domain, minutes] of Object.entries(domainTimeouts)) {
+          if (host.includes(domain)) { timeoutMs = minutes * 60 * 1000; break; }
+        }
+      } catch {}
+      if ((now - entry.lastActiveAt) >= timeoutMs) await sleepTab(tab);
+    }
   }
   await updateBadge();
 });
