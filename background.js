@@ -52,6 +52,21 @@ async function getSettings() {
   return chrome.storage.sync.get(defaults);
 }
 
+async function updateBadge() {
+  const allItems = await chrome.storage.local.get(null);
+  const count = Object.values(allItems).filter(v => v && v.sleeping).length;
+  await chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
+  await chrome.action.setBadgeBackgroundColor({ color: '#4a9eff' });
+}
+
+async function cleanupStaleTabs() {
+  const tabs = await chrome.tabs.query({});
+  const liveIds = new Set(tabs.map(t => `tab_${t.id}`));
+  const allItems = await chrome.storage.local.get(null);
+  const staleKeys = Object.keys(allItems).filter(k => k.startsWith('tab_') && !liveIds.has(k));
+  if (staleKeys.length > 0) await chrome.storage.local.remove(staleKeys);
+}
+
 // ─── Initialization ───────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -81,10 +96,15 @@ chrome.runtime.onInstalled.addListener(async () => {
     if (!existing[key]) toSet[key] = { lastActiveAt: now, sleeping: false };
   }
   if (Object.keys(toSet).length > 0) await chrome.storage.local.set(toSet);
+
+  await cleanupStaleTabs();
+  await updateBadge();
 });
 
-chrome.alarms.get(ALARM_NAME, (alarm) => {
+chrome.alarms.get(ALARM_NAME, async (alarm) => {
   if (!alarm) chrome.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_PERIOD_MINUTES });
+  await cleanupStaleTabs();
+  await updateBadge();
 });
 
 // ─── Auto-sleep alarm ─────────────────────────────────────────────────────────
@@ -109,6 +129,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (entry.neverSleep) continue;
     if ((now - entry.lastActiveAt) >= timeoutMs) await sleepTab(tab);
   }
+  await updateBadge();
 });
 
 // ─── Tab lifecycle tracking ───────────────────────────────────────────────────
@@ -122,6 +143,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   if (chrome.contextMenus) {
     chrome.contextMenus.update(CONTEXT_MENU_NEVER_SLEEP_ID, { checked: !!entry.neverSleep });
   }
+  await updateBadge();
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
@@ -136,6 +158,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   await chrome.storage.local.remove(`tab_${tabId}`);
+  await updateBadge();
 });
 
 // ─── Context menu ─────────────────────────────────────────────────────────────
@@ -148,6 +171,7 @@ if (chrome.contextMenus) {
       const exclusions = await getExclusions();
       if (!isSleepable(tab, { allowActive: true, exclusions })) return;
       await sleepTab(tab);
+      await updateBadge();
       return;
     }
 
@@ -178,6 +202,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         const exclusions = await getExclusions();
         if (isSleepable(tab, { allowActive: true, exclusions })) await sleepTab(tab);
       } catch {}
+      await updateBadge();
       sendResponse({ ok: true });
     })();
     return true;
@@ -194,6 +219,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (entry.neverSleep) continue;
         try { await sleepTab(tab); } catch {}
       }
+      await updateBadge();
       sendResponse({ ok: true });
     })();
     return true;
