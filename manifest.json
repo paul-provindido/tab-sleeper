@@ -11,6 +11,13 @@
     "contextMenus"
   ],
 
+  "commands": {
+    "sleep-current-tab": {
+      "suggested_key": { "default": "Alt+S" },
+      "description": "Sleep the current tab"
+    }
+  },
+
   "background": {
     "service_worker": "background.js"
   },

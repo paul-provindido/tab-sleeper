@@ -184,6 +184,19 @@ if (chrome.contextMenus) {
   });
 }
 
+// ─── Keyboard shortcut ───────────────────────────────────────────────────────
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'sleep-current-tab') return;
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (!tab) return;
+  const exclusions = await getExclusions();
+  if (isSleepable(tab, { allowActive: true, exclusions })) {
+    await sleepTab(tab);
+    await updateBadge();
+  }
+});
+
 // ─── Messages (from popup) ────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
