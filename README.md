@@ -18,11 +18,22 @@ A Chrome extension that suspends inactive tabs to save memory. Sleeping tabs are
 
 ## Installation
 
-1. Download or clone this repository
+### From source (development)
+
+1. Clone this repository
 2. Go to `chrome://extensions` and enable **Developer mode**
-3. Click **Load unpacked** and select the `tab-sleeper` folder
+3. Click **Load unpacked** and select the `src/` folder
 
 The extension will be active immediately. Click the icon in the toolbar to open settings.
+
+### Build a distribution zip
+
+```bash
+npm install
+npm run build
+```
+
+This creates `dist/tab-sleeper.zip` containing only the extension files, ready to submit to the Chrome Web Store or share.
 
 ## Usage
 
