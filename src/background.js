@@ -32,18 +32,49 @@ function isSleepable(tab, { allowActive = false, exclusions = [] } = {}) {
 }
 
 async function sleepTab(tab) {
+  const now = Date.now();
   const params = new URLSearchParams({
     url:   tab.url,
     title: (tab.title || tab.url).slice(0, 500),
-    icon:  tab.favIconUrl || ''
+    icon:  tab.favIconUrl || '',
+    ts:    String(now)   // sleep timestamp — recovered on browser restart
   });
   const sleepUrl = `${SLEEP_PAGE_BASE}?${params.toString()}`;
   await chrome.tabs.update(tab.id, { url: sleepUrl });
   const stored = await chrome.storage.local.get(`tab_${tab.id}`);
   const entry  = stored[`tab_${tab.id}`] || {};
   await chrome.storage.local.set({
-    [`tab_${tab.id}`]: { ...entry, lastActiveAt: Date.now(), sleeping: true, originalUrl: tab.url }
+    [`tab_${tab.id}`]: { ...entry, lastActiveAt: now, sleeping: true, originalUrl: tab.url }
   });
+}
+
+// After a browser restart Chrome assigns new tab IDs, so storage entries from
+// the previous session (keyed by old tab IDs) no longer match. Scan all tabs
+// for ones still showing sleep.html and re-create their storage entries with
+// the current tab IDs so the badge and sleeping-tab list are correct.
+async function redetectSleepingTabs() {
+  const tabs     = await chrome.tabs.query({});
+  const allItems = await chrome.storage.local.get(null);
+  const toSet    = {};
+
+  for (const tab of tabs) {
+    if (!tab.url || !tab.url.startsWith(SLEEP_PAGE_BASE)) continue;
+    const key = `tab_${tab.id}`;
+    if (allItems[key]?.sleeping) continue; // already tracked under this ID
+
+    try {
+      const params      = new URLSearchParams(new URL(tab.url).search);
+      const originalUrl = params.get('url') || '';
+      if (!originalUrl || !isSafeUrl(originalUrl)) continue;
+      toSet[key] = {
+        sleeping:     true,
+        originalUrl,
+        lastActiveAt: Number(params.get('ts')) || Date.now()
+      };
+    } catch {}
+  }
+
+  if (Object.keys(toSet).length > 0) await chrome.storage.local.set(toSet);
 }
 
 async function wakeTab(tabId) {
@@ -134,6 +165,9 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.alarms.get(ALARM_NAME, async (alarm) => {
   if (!alarm) chrome.alarms.create(ALARM_NAME, { periodInMinutes: ALARM_PERIOD_MINUTES });
+  // Re-create storage entries for sleeping tabs using their new tab IDs
+  // (Chrome assigns fresh IDs after every restart/profile switch)
+  await redetectSleepingTabs();
   await cleanupStaleTabs();
   await updateBadge();
 });
@@ -142,6 +176,9 @@ chrome.alarms.get(ALARM_NAME, async (alarm) => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM_NAME) return;
+
+  // Cleanup runs here, well after session restore has had time to complete
+  await cleanupStaleTabs();
 
   const { autoSleepEnabled, timeoutMinutes, autoWakeEnabled, autoWakeHours } = await getSettings();
   const exclusions     = await getExclusions();
