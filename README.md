@@ -64,7 +64,6 @@ Right-click any page for **Sleep this tab** and **Never sleep this tab** options
 
 The following tabs are never slept regardless of settings:
 
-- The currently active tab
 - Pinned tabs
 - `chrome://` and `chrome-extension://` pages
 - `about:` pages
