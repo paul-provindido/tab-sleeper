@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tab Sleeper",
   "version": "1.0.0",
-  "description": "Save memory by automatically suspending inactive tabs.",
+  "description": "Save memory by automatically suspending inactive tabs. (Make sure to wake all sleeping tabs if you decide to remove this extension)",
 
   "permissions": [
     "tabs",
