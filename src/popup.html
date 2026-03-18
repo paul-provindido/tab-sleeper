@@ -14,21 +14,10 @@
       <h1 class="app-name">Tab Sleeper</h1>
     </header>
 
-    <!-- Sleeping tabs stat + wake all -->
-    <section class="stat-row">
-      <span class="stat-label">Sleeping: <span id="sleepingCount" class="stat-value">—</span></span>
-      <button id="wakeAllBtn" class="btn btn-ghost btn-sm" style="display:none">Wake All</button>
-    </section>
-
-    <!-- Scrollable list of sleeping tabs -->
-    <ul id="sleepingTabsList" class="sleeping-tabs-list"></ul>
-
-    <hr>
-
     <section class="setting-row">
       <h2>This Tab</h2>
       <div class="inner-row">
-        <label for="neverSleepToggle" class="setting-label">Don't sleep this tab</label>
+        <label for="neverSleepToggle" class="setting-label">Never sleep this tab</label>
         <label class="toggle-switch">
           <input type="checkbox" id="neverSleepToggle">
           <span class="slider"></span>
@@ -46,7 +35,13 @@
     <section class="setting-row">
       <h2>All Tabs</h2>
       <div class="action-row">
+        <button id="sleepAllTabsBtn" class="btn btn-primary">Sleep All Tabs</button>
+      </div>
+      <div class="action-row">
         <button id="sleepAllBtn" class="btn btn-primary">Sleep Other Tabs</button>
+      </div>
+      <div class="action-row">
+        <button id="wakeAllBtn" class="btn btn-primary">Wake All</button>
       </div>
       <div class="inner-row">
         <label for="autoSleepToggle" class="setting-label">Auto-sleep</label>
