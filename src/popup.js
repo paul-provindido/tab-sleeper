@@ -4,13 +4,12 @@ const timeoutRow           = document.getElementById('timeoutRow');
 const autoWakeToggle       = document.getElementById('autoWakeToggle');
 const autoWakeInput        = document.getElementById('autoWakeInput');
 const autoWakeRow          = document.getElementById('autoWakeRow');
-const sleepingCount        = document.getElementById('sleepingCount');
 const saveStatus           = document.getElementById('saveStatus');
 const neverSleepToggle     = document.getElementById('neverSleepToggle');
 const sleepTabBtn          = document.getElementById('sleepTabBtn');
+const sleepAllTabsBtn      = document.getElementById('sleepAllTabsBtn');
 const sleepAllBtn          = document.getElementById('sleepAllBtn');
 const wakeAllBtn           = document.getElementById('wakeAllBtn');
-const sleepingTabsList     = document.getElementById('sleepingTabsList');
 const exclusionTextarea    = document.getElementById('exclusionTextarea');
 const domainTimeoutTextarea  = document.getElementById('domainTimeoutTextarea');
 const saveDomainTimeoutsBtn  = document.getElementById('saveDomainTimeoutsBtn');
@@ -61,40 +60,6 @@ function showSaveStatus(msg) {
   saveStatus.textContent = msg;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { saveStatus.textContent = ''; }, 1500);
-}
-
-// ─── Sleeping tabs list ───────────────────────────────────────────────────────
-
-async function loadSleepingTabs() {
-  try {
-    const { tabs = [] } = await chrome.runtime.sendMessage({ action: 'getSleepingTabs' });
-    sleepingCount.textContent = tabs.length;
-    wakeAllBtn.style.display  = tabs.length > 0 ? '' : 'none';
-
-    sleepingTabsList.innerHTML = '';
-    for (const t of tabs) {
-      const li    = document.createElement('li');
-      li.className = 'sleeping-tab-item';
-
-      const title = document.createElement('span');
-      title.className   = 'sleeping-tab-title';
-      title.textContent = t.title || t.originalUrl || 'Sleeping tab';
-      title.title       = t.originalUrl;
-
-      const btn = document.createElement('button');
-      btn.className   = 'sleeping-tab-wake';
-      btn.textContent = 'Wake';
-      btn.addEventListener('click', async () => {
-        await chrome.runtime.sendMessage({ action: 'wakeTab', tabId: t.tabId });
-        loadSleepingTabs();
-      });
-
-      li.append(title, btn);
-      sleepingTabsList.appendChild(li);
-    }
-  } catch {
-    sleepingCount.textContent = '0';
-  }
 }
 
 // ─── Never-sleep toggle ───────────────────────────────────────────────────────
@@ -176,6 +141,11 @@ sleepTabBtn.addEventListener('click', async () => {
   window.close();
 });
 
+sleepAllTabsBtn.addEventListener('click', async () => {
+  await chrome.runtime.sendMessage({ action: 'sleepAllTabsIncludingActive' });
+  window.close();
+});
+
 sleepAllBtn.addEventListener('click', async () => {
   await chrome.runtime.sendMessage({ action: 'sleepAllTabs' });
   window.close();
@@ -183,7 +153,6 @@ sleepAllBtn.addEventListener('click', async () => {
 
 wakeAllBtn.addEventListener('click', async () => {
   await chrome.runtime.sendMessage({ action: 'wakeAllTabs' });
-  loadSleepingTabs();
 });
 
 // ─── Export / Import ─────────────────────────────────────────────────────────
@@ -269,7 +238,6 @@ autoWakeInput.addEventListener('change', saveSettings);
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 loadSettings();
-loadSleepingTabs();
 loadNeverSleep();
 loadExclusions();
 loadDomainTimeouts();

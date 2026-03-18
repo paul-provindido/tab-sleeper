@@ -5,7 +5,7 @@
 
   document.getElementById('pageTitle').textContent = originalTitle;
   document.getElementById('pageUrl').textContent   = originalUrl;
-  document.title = 'Sleeping: ' + originalTitle;
+  document.title = originalTitle;
 
   function isSafeUrl(url) {
     try {

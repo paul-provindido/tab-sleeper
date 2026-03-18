@@ -115,10 +115,7 @@ async function getDomainTimeouts() {
 }
 
 async function updateBadge() {
-  const allItems = await chrome.storage.local.get(null);
-  const count = Object.values(allItems).filter(v => v && v.sleeping).length;
-  await chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' });
-  await chrome.action.setBadgeBackgroundColor({ color: '#4a9eff' });
+  await chrome.action.setBadgeText({ text: '' });
 }
 
 async function cleanupStaleTabs() {
@@ -140,7 +137,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     });
     chrome.contextMenus.create({
       id:       CONTEXT_MENU_NEVER_SLEEP_ID,
-      title:    "Don't sleep this tab",
+      title:    "Never sleep this tab",
       type:     'checkbox',
       checked:  false,
       contexts: ['page']
@@ -345,6 +342,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
         if (!isSleepable(tab, { exclusions })) continue;
+        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
+        const entry  = stored[`tab_${tab.id}`] || {};
+        if (entry.neverSleep) continue;
+        try { await sleepTab(tab); } catch {}
+      }
+      await updateBadge();
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+
+  if (message.action === 'sleepAllTabsIncludingActive') {
+    (async () => {
+      const exclusions = await getExclusions();
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        if (!isSleepable(tab, { allowActive: true, exclusions })) continue;
         const stored = await chrome.storage.local.get(`tab_${tab.id}`);
         const entry  = stored[`tab_${tab.id}`] || {};
         if (entry.neverSleep) continue;
