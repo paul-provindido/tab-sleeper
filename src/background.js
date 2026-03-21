@@ -328,7 +328,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       try {
         const tab = await chrome.tabs.get(message.tabId);
         const exclusions = await getExclusions();
-        if (isSleepable(tab, { allowActive: true, exclusions })) await sleepTab(tab);
+        if (!isSleepable(tab, { allowActive: true, exclusions })) return;
+        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
+        const entry  = stored[`tab_${tab.id}`] || {};
+        if (entry.neverSleep) return;
+        await sleepTab(tab);
       } catch {}
       await updateBadge();
       sendResponse({ ok: true });
