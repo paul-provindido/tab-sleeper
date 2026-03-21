@@ -53,7 +53,7 @@ async function saveSettings() {
     autoWakeEnabled:  autoWakeToggle.checked,
     autoWakeHours:    hours
   });
-  showSaveStatus('Saved.');
+  showSaveStatus('Saved');
 }
 
 function showSaveStatus(msg) {
@@ -102,7 +102,7 @@ async function saveExclusions() {
     .filter(s => s.length <= 253)
     .slice(0, 100);
   await chrome.storage.sync.set({ exclusions });
-  showSaveStatus('Saved.');
+  showSaveStatus('Saved');
 }
 
 exclusionTextarea.addEventListener('blur', saveExclusions);
@@ -130,7 +130,7 @@ async function saveDomainTimeouts() {
     domainTimeouts[domain] = minutes;
   }
   await chrome.storage.sync.set({ domainTimeouts });
-  showSaveStatus('Saved.');
+  showSaveStatus('Saved');
 }
 
 saveDomainTimeoutsBtn.addEventListener('click', async () => {
