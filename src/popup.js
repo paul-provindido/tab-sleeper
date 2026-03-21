@@ -53,7 +53,7 @@ async function saveSettings() {
     autoWakeEnabled:  autoWakeToggle.checked,
     autoWakeHours:    hours
   });
-  showSaveStatus('Saved.');
+  showSaveStatus('Saved');
 }
 
 function showSaveStatus(msg) {
@@ -64,15 +64,21 @@ function showSaveStatus(msg) {
 
 // ─── Never-sleep toggle ───────────────────────────────────────────────────────
 
+function updateSleepTabBtnState() {
+  sleepTabBtn.disabled = neverSleepToggle.checked;
+}
+
 async function loadNeverSleep() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab) return;
   const stored = await chrome.storage.local.get(`tab_${tab.id}`);
   const entry  = stored[`tab_${tab.id}`] || {};
   neverSleepToggle.checked = !!entry.neverSleep;
+  updateSleepTabBtnState();
 }
 
 neverSleepToggle.addEventListener('change', async () => {
+  updateSleepTabBtnState();
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab) return;
   const key    = `tab_${tab.id}`;
@@ -96,7 +102,7 @@ async function saveExclusions() {
     .filter(s => s.length <= 253)
     .slice(0, 100);
   await chrome.storage.sync.set({ exclusions });
-  showSaveStatus('Saved.');
+  showSaveStatus('Saved');
 }
 
 exclusionTextarea.addEventListener('blur', saveExclusions);
@@ -124,7 +130,7 @@ async function saveDomainTimeouts() {
     domainTimeouts[domain] = minutes;
   }
   await chrome.storage.sync.set({ domainTimeouts });
-  showSaveStatus('Saved.');
+  showSaveStatus('Saved');
 }
 
 saveDomainTimeoutsBtn.addEventListener('click', async () => {

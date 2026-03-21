@@ -228,9 +228,18 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-  if (changeInfo.url && !changeInfo.url.startsWith(SLEEP_PAGE_BASE)) {
-    const stored = await chrome.storage.local.get(`tab_${tabId}`);
-    const entry  = stored[`tab_${tabId}`] || {};
+  if (!changeInfo.url) return;
+
+  const stored = await chrome.storage.local.get(`tab_${tabId}`);
+  const entry  = stored[`tab_${tabId}`] || {};
+  const isOnSleepPage = changeInfo.url.startsWith(SLEEP_PAGE_BASE);
+
+  if (isOnSleepPage && entry.sleeping) {
+    // User refreshed a sleeping tab - wake it up
+    await wakeTab(tabId);
+    await updateBadge();
+  } else if (!isOnSleepPage) {
+    // Navigating away from sleep.html - mark as awake
     await chrome.storage.local.set({
       [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
     });
@@ -328,7 +337,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       try {
         const tab = await chrome.tabs.get(message.tabId);
         const exclusions = await getExclusions();
-        if (isSleepable(tab, { allowActive: true, exclusions })) await sleepTab(tab);
+        if (!isSleepable(tab, { allowActive: true, exclusions })) return;
+        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
+        const entry  = stored[`tab_${tab.id}`] || {};
+        if (entry.neverSleep) return;
+        await sleepTab(tab);
       } catch {}
       await updateBadge();
       sendResponse({ ok: true });
