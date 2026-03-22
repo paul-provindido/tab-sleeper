@@ -104,6 +104,11 @@ async function getSettings() {
   return chrome.storage.sync.get(defaults);
 }
 
+async function getNeverSleepUrls() {
+  const { neverSleepUrls = [] } = await chrome.storage.local.get('neverSleepUrls');
+  return Array.isArray(neverSleepUrls) ? neverSleepUrls : [];
+}
+
 async function getDomainTimeouts() {
   const { domainTimeouts = {} } = await chrome.storage.sync.get('domainTimeouts');
   if (!domainTimeouts || typeof domainTimeouts !== 'object' || Array.isArray(domainTimeouts)) return {};
@@ -180,6 +185,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const { autoSleepEnabled, timeoutMinutes, autoWakeEnabled, autoWakeHours } = await getSettings();
   const exclusions     = await getExclusions();
   const domainTimeouts = await getDomainTimeouts();
+  const neverSleepUrls = await getNeverSleepUrls();
   const tabs           = await chrome.tabs.query({});
   const now            = Date.now();
   const defaultMs      = timeoutMinutes * 60 * 1000;
@@ -197,7 +203,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     } else {
       if (!autoSleepEnabled) continue;
       if (!isSleepable(tab, { exclusions })) continue;
-      if (entry.neverSleep) continue;
+      if (neverSleepUrls.includes(tab.url)) continue;
       let timeoutMs = defaultMs;
       try {
         const host = new URL(tab.url).hostname;
@@ -222,7 +228,9 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
     });
   }
   if (chrome.contextMenus) {
-    chrome.contextMenus.update(CONTEXT_MENU_NEVER_SLEEP_ID, { checked: !!entry.neverSleep });
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    const neverSleepUrls = await getNeverSleepUrls();
+    chrome.contextMenus.update(CONTEXT_MENU_NEVER_SLEEP_ID, { checked: neverSleepUrls.includes(tab?.url) });
   }
   await updateBadge();
 });
@@ -259,18 +267,21 @@ if (chrome.contextMenus) {
     if (!tab) return;
 
     if (info.menuItemId === CONTEXT_MENU_ID) {
-      const exclusions = await getExclusions();
+      const exclusions     = await getExclusions();
+      const neverSleepUrls = await getNeverSleepUrls();
       if (!isSleepable(tab, { allowActive: true, exclusions })) return;
+      if (neverSleepUrls.includes(tab.url)) return;
       await sleepTab(tab);
       await updateBadge();
       return;
     }
 
     if (info.menuItemId === CONTEXT_MENU_NEVER_SLEEP_ID) {
-      const key    = `tab_${tab.id}`;
-      const stored = await chrome.storage.local.get(key);
-      const entry  = stored[key] || {};
-      await chrome.storage.local.set({ [key]: { ...entry, neverSleep: info.checked } });
+      const neverSleepUrls = await getNeverSleepUrls();
+      const updated = info.checked
+        ? [...new Set([...neverSleepUrls, tab.url])]
+        : neverSleepUrls.filter(u => u !== tab.url);
+      await chrome.storage.local.set({ neverSleepUrls: updated });
     }
   });
 }
@@ -281,8 +292,9 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'sleep-current-tab') return;
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab) return;
-  const exclusions = await getExclusions();
-  if (isSleepable(tab, { allowActive: true, exclusions })) {
+  const exclusions     = await getExclusions();
+  const neverSleepUrls = await getNeverSleepUrls();
+  if (isSleepable(tab, { allowActive: true, exclusions }) && !neverSleepUrls.includes(tab.url)) {
     await sleepTab(tab);
     await updateBadge();
   }
@@ -336,11 +348,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     (async () => {
       try {
         const tab = await chrome.tabs.get(message.tabId);
-        const exclusions = await getExclusions();
+        const exclusions     = await getExclusions();
+        const neverSleepUrls = await getNeverSleepUrls();
         if (!isSleepable(tab, { allowActive: true, exclusions })) return;
-        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
-        const entry  = stored[`tab_${tab.id}`] || {};
-        if (entry.neverSleep) return;
+        if (neverSleepUrls.includes(tab.url)) return;
         await sleepTab(tab);
       } catch {}
       await updateBadge();
@@ -351,13 +362,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.action === 'sleepAllTabs') {
     (async () => {
-      const exclusions = await getExclusions();
+      const exclusions     = await getExclusions();
+      const neverSleepUrls = await getNeverSleepUrls();
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
         if (!isSleepable(tab, { exclusions })) continue;
-        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
-        const entry  = stored[`tab_${tab.id}`] || {};
-        if (entry.neverSleep) continue;
+        if (neverSleepUrls.includes(tab.url)) continue;
         try { await sleepTab(tab); } catch {}
       }
       await updateBadge();
@@ -368,13 +378,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.action === 'sleepAllTabsIncludingActive') {
     (async () => {
-      const exclusions = await getExclusions();
+      const exclusions     = await getExclusions();
+      const neverSleepUrls = await getNeverSleepUrls();
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
         if (!isSleepable(tab, { allowActive: true, exclusions })) continue;
-        const stored = await chrome.storage.local.get(`tab_${tab.id}`);
-        const entry  = stored[`tab_${tab.id}`] || {};
-        if (entry.neverSleep) continue;
+        if (neverSleepUrls.includes(tab.url)) continue;
         try { await sleepTab(tab); } catch {}
       }
       await updateBadge();
