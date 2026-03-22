@@ -19,7 +19,7 @@ function isSafeUrl(url) {
 function isSleepable(tab, { allowActive = false, exclusions = [] } = {}) {
   if (!tab.url) return false;
   if (!allowActive && tab.active) return false;
-  if (tab.pinned) return false;
+
   const blocked = ['chrome://', 'chrome-extension://', 'about:', 'edge://', 'javascript:', 'data:'];
   if (blocked.some(prefix => tab.url.startsWith(prefix))) return false;
   if (exclusions.length > 0) {
