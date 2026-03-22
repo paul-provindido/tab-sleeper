@@ -17,6 +17,7 @@ const exportBtn            = document.getElementById('exportBtn');
 const importInput          = document.getElementById('importInput');
 
 let saveTimer = null;
+let currentTab = null;
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
@@ -69,22 +70,20 @@ function updateSleepTabBtnState() {
 }
 
 async function loadNeverSleep() {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (!tab) return;
-  const stored = await chrome.storage.local.get(`tab_${tab.id}`);
-  const entry  = stored[`tab_${tab.id}`] || {};
-  neverSleepToggle.checked = !!entry.neverSleep;
+  if (!currentTab) return;
+  const { neverSleepUrls = [] } = await chrome.storage.local.get('neverSleepUrls');
+  neverSleepToggle.checked = neverSleepUrls.includes(currentTab.url);
   updateSleepTabBtnState();
 }
 
 neverSleepToggle.addEventListener('change', async () => {
   updateSleepTabBtnState();
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (!tab) return;
-  const key    = `tab_${tab.id}`;
-  const stored = await chrome.storage.local.get(key);
-  const entry  = stored[key] || {};
-  await chrome.storage.local.set({ [key]: { ...entry, neverSleep: neverSleepToggle.checked } });
+  if (!currentTab) return;
+  const { neverSleepUrls = [] } = await chrome.storage.local.get('neverSleepUrls');
+  const updated = neverSleepToggle.checked
+    ? [...new Set([...neverSleepUrls, currentTab.url])]
+    : neverSleepUrls.filter(u => u !== currentTab.url);
+  await chrome.storage.local.set({ neverSleepUrls: updated });
 });
 
 // ─── Exclusions ───────────────────────────────────────────────────────────────
@@ -142,8 +141,7 @@ saveDomainTimeoutsBtn.addEventListener('click', async () => {
 // ─── Sleep / wake buttons ─────────────────────────────────────────────────────
 
 sleepTabBtn.addEventListener('click', async () => {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (tab) await chrome.runtime.sendMessage({ action: 'sleepCurrentTab', tabId: tab.id });
+  if (currentTab) await chrome.runtime.sendMessage({ action: 'sleepCurrentTab', tabId: currentTab.id });
   window.close();
 });
 
@@ -243,7 +241,10 @@ autoWakeInput.addEventListener('change', saveSettings);
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-loadSettings();
-loadNeverSleep();
-loadExclusions();
-loadDomainTimeouts();
+(async () => {
+  [currentTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  loadSettings();
+  loadNeverSleep();
+  loadExclusions();
+  loadDomainTimeouts();
+})();
