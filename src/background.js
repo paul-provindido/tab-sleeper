@@ -7,6 +7,10 @@ const DEFAULT_TIMEOUT_MINUTES = 30;
 const CONTEXT_MENU_ID            = 'sleepTab';
 const CONTEXT_MENU_NEVER_SLEEP_ID = 'neverSleepTab';
 
+// Tabs currently being navigated to sleep.html for the first time.
+// Used to distinguish initial sleep navigation from a user-triggered refresh.
+const pendingSleepTabs = new Set();
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function isSafeUrl(url) {
@@ -40,12 +44,14 @@ async function sleepTab(tab) {
     ts:    String(now)   // sleep timestamp — recovered on browser restart
   });
   const sleepUrl = `${SLEEP_PAGE_BASE}?${params.toString()}`;
+  pendingSleepTabs.add(tab.id);
   await chrome.tabs.update(tab.id, { url: sleepUrl });
   const stored = await chrome.storage.local.get(`tab_${tab.id}`);
   const entry  = stored[`tab_${tab.id}`] || {};
   await chrome.storage.local.set({
     [`tab_${tab.id}`]: { ...entry, lastActiveAt: now, sleeping: true, originalUrl: tab.url }
   });
+  // pendingSleepTabs entry is cleared by onUpdated once status:'complete' fires
 }
 
 // After a browser restart Chrome assigns new tab IDs, so storage entries from
@@ -236,22 +242,40 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
-  if (!changeInfo.url) return;
+  // Initial sleep navigation complete — clear the pending flag
+  if (pendingSleepTabs.has(tabId) && changeInfo.status === 'complete') {
+    pendingSleepTabs.delete(tabId);
+    return;
+  }
 
-  const stored = await chrome.storage.local.get(`tab_${tabId}`);
-  const entry  = stored[`tab_${tabId}`] || {};
-  const isOnSleepPage = changeInfo.url.startsWith(SLEEP_PAGE_BASE);
-
-  if (isOnSleepPage && entry.sleeping) {
-    // User refreshed a sleeping tab - wake it up
-    await wakeTab(tabId);
-    await updateBadge();
-  } else if (!isOnSleepPage) {
-    // Navigating away from sleep.html - mark as awake
+  if (changeInfo.url) {
+    if (changeInfo.url.startsWith(SLEEP_PAGE_BASE)) {
+      // Tab is being navigated to sleep.html for the first time — do nothing
+      return;
+    }
+    // Navigating away from sleep.html to a real URL
+    pendingSleepTabs.delete(tabId);
+    const stored = await chrome.storage.local.get(`tab_${tabId}`);
+    const entry  = stored[`tab_${tabId}`] || {};
     await chrome.storage.local.set({
       [`tab_${tabId}`]: { ...entry, lastActiveAt: Date.now(), sleeping: false }
     });
     if (entry.sleeping) await updateBadge();
+    return;
+  }
+
+  // No URL change + status loading + not a pending sleep = user refreshed the page
+  if (changeInfo.status === 'loading' && !pendingSleepTabs.has(tabId)) {
+    const stored = await chrome.storage.local.get(`tab_${tabId}`);
+    const entry  = stored[`tab_${tabId}`] || {};
+    if (!entry.sleeping) return;
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      if (tab.url?.startsWith(SLEEP_PAGE_BASE)) {
+        await wakeTab(tabId);
+        await updateBadge();
+      }
+    } catch {}
   }
 });
 
