@@ -17,7 +17,7 @@
   }
 
   function awaken() {
-    if (isSafeUrl(originalUrl)) window.location.href = originalUrl;
+    if (isSafeUrl(originalUrl)) window.location.replace(originalUrl);
   }
 
   const iconUrl = params.get('icon') || '';
@@ -33,6 +33,5 @@
     } catch {}
   }
 
-  document.getElementById('awakenBtn').addEventListener('click', awaken);
   document.body.addEventListener('click', awaken);
 })();

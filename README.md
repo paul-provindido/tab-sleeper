@@ -1,20 +1,18 @@
 # Tab Sleeper
 
-A Chrome extension that suspends inactive tabs to save memory. Sleeping tabs are replaced with a lightweight placeholder page and restored on demand.
+A Chrome extension that suspends inactive tabs to save memory. Manual sleep actions move tabs to a lightweight sleeping page; automatic idle sleep can use Chrome's native discard API for background tabs.
 
 ## Features
 
 - **Auto-sleep** — tabs are suspended after a configurable idle timeout (default 30 min)
 - **Manual sleep** — sleep the current tab via the popup, context menu, or `Alt+S`
 - **Sleep All / Wake All** — bulk actions from the popup
-- **Sleeping tabs list** — see all suspended tabs and wake individual ones from the popup
 - **Auto-wake** — sleeping tabs can be automatically restored after a configurable number of hours
 - **Per-domain timeout** — set custom sleep delays for specific domains
 - **Exclusion rules** — prevent certain domains from ever being slept
 - **Never-sleep toggle** — pin the current tab so it won't be suspended
 - **Site favicon** — the sleeping tab placeholder shows the original site's favicon
 - **Export / Import settings** — back up or transfer your configuration as JSON
-- **Badge count** — the extension icon shows the number of currently sleeping tabs
 
 ## Installation
 
@@ -49,12 +47,14 @@ This creates `dist/tab-sleeper.zip` containing only the extension files, ready t
 | Timeout | Minutes of inactivity before a tab is slept |
 | Auto-wake | Restore sleeping tabs after N hours automatically |
 | Excluded domains | One domain per line — matching tabs are never slept |
-| Per-domain timeout | Override the timeout for specific domains (`example.com = 60`) |
+| Per-domain timeout | Override the timeout for specific domains (`example.com:60`) |
 | Export / Import | Save or restore all settings as a JSON file |
 
 ### Keyboard shortcut
 
 `Alt+S` — sleep the currently active tab. Can be changed at `chrome://extensions/shortcuts`.
+
+Manual sleep actions keep the same tab selected and show the sleeping placeholder page.
 
 ### Context menu
 
